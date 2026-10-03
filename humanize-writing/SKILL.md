@@ -19,7 +19,7 @@ Removing the obvious words isn't enough. Text that's clean of "delve" but still 
 ### 1. Get context and pick a mode (briefly)
 
 Figure out:
-- **Genre and reader**: resume, report, spoken script, email, blog, etc. Each one has its own register and its own tells, so read the matching section of `references/genres.md` before writing.
+- **Genre and reader**: resume, report, spoken script, email, blog, etc. Each one has its own register and its own tells, so read the matching section of `references/genres.md` before writing. For IELTS or other speaking-exam answers, also read `references/ielts-speaking.md`, which has the user's preferred model answer and template.
 - **Voice sample**: Has the user given you something they wrote themselves, or is there a filled-in `references/voice-profile.md`? A sample is the single most useful input. Use it in step 3.
 - **Raw material**: real anecdotes, numbers, names, and opinions.
 

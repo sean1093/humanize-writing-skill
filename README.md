@@ -136,11 +136,32 @@ Q3 churn was 6.1%, up from 4.8% in Q2.
 幫我寫成口說的回答，大概 1.5 分鐘。
 ```
 
-**IELTS / TOEFL**
+**IELTS 雅思口說**
+
+Skill 內建一份 Part 2 範例模板（`references/ielts-speaking.md`），預設會照這個風格寫：用字淺白，每篇只放 3 到 6 個主題字詞，一個具體故事加上你自己的經驗，長度 180 到 250 字（約 1.5 到 2 分鐘）。
+
+結構：
+1. 開場：介紹對象（1 句）
+2. 怎麼認識的：一開始…後來…（2 到 3 句）
+3. 主要理由：點出一個具體概念，再用簡單的話解釋（2 到 3 句）
+4. 一個具體故事：I remember that…（3 到 4 句）
+5. 跟自己的連結：你自己的經驗（3 到 4 句）
+6. 收尾：So, for me… That's why…（2 句）
+
+**給你自己的經驗，效果最好**，回答會更自然，你也更容易記住、講得流利：
 ```
-IELTS speaking part 2 題目：Describe a place you visited that left a strong impression.
-我想講去年去京都的經驗，幫我寫一個 2 分鐘的回答，程度 band 6.5–7。
+雅思口說 part 2：Describe a skill you learned that you are proud of.
+我的經驗：大學一年級學游泳，本來很怕水，練了一個學期，現在可以游 1000 公尺。
 ```
+
+沒給經驗也可以，skill 會用 `[ ]` 標出建議的故事，你再換成自己的：
+```
+幫我寫雅思口說 part 2：Describe a place you visited that you would like to go back to.
+```
+
+Part 1（30 到 60 字）和 Part 3（70 到 120 字）也適用，題目貼上去就好。想要不同程度，就加一句「程度 band 7」。
+
+想換成自己的範例模板，直接改 `references/ielts-speaking.md` 第 1 節的範例答案。
 
 **改寫你自己寫的稿子**
 ```
@@ -287,6 +308,7 @@ humanize-writing/
 │   ├── ai-tells.md           # AI 慣用字詞、句型、結構清單與替代寫法
 │   ├── techniques.md         # 10 組改寫前後對照
 │   ├── genres.md             # 履歷、報告、口說、email 等各文體的寫法
+│   ├── ielts-speaking.md     # 雅思口說範例答案、Part 1/2/3 模板
 │   └── voice-profile.md      # 你的寫作樣本（自己填）
 ├── scripts/
 │   └── check_tells.py        # 檢查腳本

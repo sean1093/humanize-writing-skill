@@ -73,6 +73,8 @@ Here the target is **natural spoken English**, which differs from good written E
 - Fewer nouns made from verbs ("we decided", not "the decision was made")
 - Simpler vocabulary than writing. "Use", not "utilize". "Really important", not "paramount".
 
+**IELTS / TOEFL / exam speaking**: read `ielts-speaking.md`. It has the user's preferred model answer, a Part 2 template, vocabulary level, and exceptions to the usual AI-tell rules (for example, one "not only… but also" is fine there).
+
 **Things that sound memorized and robotic when spoken**
 - "Firstly… Secondly… In conclusion…"
 - Long lists of three adjectives

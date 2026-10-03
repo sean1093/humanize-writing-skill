@@ -182,7 +182,9 @@ def style_metrics(text, sents, words):
     mean = statistics.mean(lens) if lens else 0
     sd = statistics.pstdev(lens) if len(lens) > 1 else 0
     openers = [o for o in (opener(s) for s in sents) if o]
-    top_share = (max(openers.count(o) for o in set(openers)) / len(openers)) if openers else 0
+    # "I" openers are normal in first-person writing and speech, so they don't count as repetition.
+    non_i = [o for o in openers if o != "i"]
+    top_share = (max(non_i.count(o) for o in set(non_i)) / len(openers)) if non_i else 0
     det_share = (sum(o in DET_OPENERS for o in openers) / len(openers)) if openers else 0
     return {
         "sentence_len_mean": round(mean, 1),
@@ -196,6 +198,7 @@ def style_metrics(text, sents, words):
         "commas_per_sentence": round(text.count(",") / max(len(sents), 1), 2),
         "top_opener_share": round(top_share, 2),
         "pronoun_det_opener_share": round(det_share, 2),
+        "i_opener_share": round(sum(o == "i" for o in openers) / len(openers), 2) if openers else 0,
         "questions_pct": round(100 * sum(s.rstrip().endswith("?") for s in sents) / max(len(sents), 1), 1),
         "parentheses_per_100w": round(100 * text.count("(") / n, 2),
         "em_dashes_per_300w": round(300 * em_dash_count(text) / n, 2),
@@ -290,7 +293,7 @@ def report(r):
     eflag = "  <- too many" if st["em_dashes_per_300w"] > 1 else ""
     out.append(f"  em dashes: {r['em_dashes']} ({st['em_dashes_per_300w']} per 300 words){eflag}")
     oflag = "  <- sentence openers repetitive" if (st["top_opener_share"] > 0.3 or st["pronoun_det_opener_share"] > 0.5) and enough else ""
-    out.append(f"  most common opener share {st['top_opener_share']}, The/This/It openers {st['pronoun_det_opener_share']}{oflag}")
+    out.append(f"  most common opener share {st['top_opener_share']} (excl. I), The/This/It openers {st['pronoun_det_opener_share']}, I {st['i_opener_share']}{oflag}")
     out.append(f"  contractions {st['contractions_per_100w']}/100w, avg word length {st['avg_word_len']}, lexical variety {st['lexical_variety_mattr']}")
     out.append(f"  sentences opening with stock transitions: {r['transition_sentence_starts']}")
     out.append("")

@@ -43,12 +43,20 @@ cp -r humanize-writing-skill/humanize-writing <你的專案>/.claude/skills/
 
 ### Claude.ai（網頁版 / App）
 
-1. 把 `humanize-writing` 資料夾壓成 zip：
-   ```bash
-   cd humanize-writing-skill && zip -r humanize-writing.zip humanize-writing
-   ```
-2. 到 Claude.ai 的 **Settings → Capabilities → Skills**，上傳 `humanize-writing.zip`。
+**最簡單：直接下載打包好的檔案**
+
+1. 下載 [`dist/humanize-writing.zip`](dist/humanize-writing.zip)（在 GitHub 上點進檔案，再按右上角的 Download）。
+2. 到 Claude.ai 的 **Settings → Capabilities → Skills**，按 **Upload skill**，選這個 zip。
 3. 確認 skill 已啟用（開關打開）。
+
+**自己打包的話**，要注意兩點，不然上傳會出錯：
+- zip 裡最外層必須是 `humanize-writing/` **資料夾**，`SKILL.md` 放在資料夾裡面，不能直接放在 zip 根目錄。
+- 不要用 GitHub 的「Download ZIP」整包上傳，因為那樣最外層會是 `humanize-writing-skill-master/`，多了一層。
+
+```bash
+cd humanize-writing-skill
+zip -r humanize-writing.zip humanize-writing -x "humanize-writing/evals/*"
+```
 
 > Claude.ai 需要開啟「Code execution」相關功能，才能執行檢查腳本。沒有開也能用，只是少了自動檢查這一步。
 
@@ -230,7 +238,11 @@ humanize-writing/
 ├── scripts/
 │   └── check_tells.py        # 檢查腳本
 └── evals/
-    └── evals.json            # 測試題目（開發用）
+    └── evals.json            # 測試題目（開發用，不會打包進 zip）
+
+dist/
+├── humanize-writing.zip      # 給 Claude.ai 上傳用
+└── humanize-writing.skill    # 同內容，.skill 格式
 ```
 
 想自訂的話，最常改的是這兩個地方：

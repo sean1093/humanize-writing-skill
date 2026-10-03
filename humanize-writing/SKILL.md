@@ -5,63 +5,110 @@ description: Write or rewrite English so it reads like a real person wrote it, n
 
 # Humanize Writing
 
-The goal is prose a sharp human editor would accept as written by a person with opinions and a particular way of talking. Detectors and readers pick up on the same underlying things: predictable word choice, even rhythm, generic content, and a set of stock moves models overuse. Fix those at the root and the detector score usually takes care of itself. Chasing a single detector's number by inserting typos or swapping in odd synonyms makes the writing worse and stops working once the detector updates, so don't do that.
+The goal is prose a sharp human editor would accept as written by a person with opinions and a particular way of talking. Detectors and readers pick up on the same underlying things:
+
+- **Predictability**: every word is the most likely next word. This is what perplexity-based detectors measure.
+- **Evenness**: similar sentence lengths, similar openers, similar paragraph shapes. This is "burstiness".
+- **Generic content**: no specific people, numbers, places, or moments.
+- **Stock moves**: the vocabulary and sentence patterns models overuse.
+
+Removing the obvious words isn't enough. Text that's clean of "delve" but still smooth, balanced, and generic gets flagged anyway. The fixes that really work are the ones that make the text *less predictable in the way a specific person is less predictable*: their own details, their own phrasing habits, their own rhythm.
 
 ## Workflow
 
-### 1. Get context (briefly)
+### 1. Get context and pick a mode (briefly)
 
-Before writing, figure out:
-- **Genre and reader**: resume, report, spoken script, email, blog, etc. Each one has its own register and its own tells, so read the matching section of `references/genres.md` before writing. Resumes keep their bullets, reports may stay formal, and speaking scripts must sound like speech rather than an essay.
-- **Voice**: Did the user give a writing sample? If so, it's the best input you have. Study its sentence length, how it opens paragraphs, its contractions, humor, pet phrases, punctuation habits, and how formal it is, then match that. If there's no sample, pick a voice that fits the genre and commit to it.
-- **Raw material**: real anecdotes, numbers, names, and opinions the user can provide.
+Figure out:
+- **Genre and reader**: resume, report, spoken script, email, blog, etc. Each one has its own register and its own tells, so read the matching section of `references/genres.md` before writing.
+- **Voice sample**: Has the user given you something they wrote themselves, or is there a filled-in `references/voice-profile.md`? A sample is the single most useful input. Use it in step 3.
+- **Raw material**: real anecdotes, numbers, names, and opinions.
 
-If the request already makes most of this clear, don't interrogate the user. Ask one short question at most, or just proceed and state your assumptions.
+Then pick the mode. **More of the user's own words in = more human out.**
+
+| Mode | When | What you do |
+|---|---|---|
+| **Light-touch edit** | The user wrote the draft themselves | Keep their wording, order, and quirks. Fix grammar errors, unclear sentences, and the worst tells only. Don't "upgrade" their vocabulary. |
+| **Build from notes** | The user gives rough notes, bullet thoughts, or a messy draft (in any language) | Write the piece around their points and phrases, reusing their exact wording wherever it works in English. |
+| **Full rewrite** | Input is AI-generated or very generic | Rewrite fully using the moves in step 4. |
+| **From scratch** | Only a topic | Write it, but ask for (or leave placeholders for) the real details. |
+
+Light-touch edit matters more than it seems. Human text that's been heavily polished (by Grammarly, ChatGPT, or you) is one of the most common reasons real writing gets flagged. When the user brings their own draft, resist the urge to make it smooth.
+
+If the request already makes most of this clear, don't interrogate the user. Ask one short question at most, or proceed and state your assumptions. If you're writing from scratch and have no real details, say once that pasting their own rough notes or a sample will make the result noticeably more human.
 
 ### 2. Draft or take the input
 
-When writing from scratch, write the way a person does: start from what you actually want to say, not from an outline of "key points".
+When writing from scratch, start from what you actually want to say, not from an outline of "key points".
 
 ### 3. Diagnose
 
-Run the checker on the draft (or on the user's original, so you can show the before/after):
+Save the draft to a file and run the checker:
 
 ```bash
-python3 <skill-dir>/scripts/check_tells.py draft.txt      # or: echo "$TEXT" | python3 .../check_tells.py -
+python3 <skill-dir>/scripts/check_tells.py draft.txt
+python3 <skill-dir>/scripts/check_tells.py draft.txt --compare sample.txt   # when you have a writing sample
 ```
 
-It reports flagged words and phrases with line numbers, structural patterns, and rhythm stats (sentence-length variation, em-dash density). Treat it as a smoke alarm rather than a grade. A clean report doesn't mean the text is good, and one "crucial" in a 1,000-word piece is fine. For the full catalog of tells and the reasons they read as machine-made, see `references/ai-tells.md`.
+It reports:
+- AI-tell words, phrases, and structures, with line numbers
+- **bland/predictable wording**: "safe" words like *various, ensure, significant, in terms of*. They're harmless alone, but they make text predictable when they pile up.
+- rhythm and style stats: sentence-length variation, short/long sentence share, sentence-opener repetition, contractions, word length
+- **"Rewrite these sentences first"**: the sentences carrying the most tells
+- with `--compare`, a **voice match** table showing where the draft drifts from the sample (for example "avg word length too high" or "The/This/It openers too high")
+
+Treat it as a smoke alarm rather than a grade. A clean report doesn't mean the text is good. For the full catalog of tells, see `references/ai-tells.md`.
 
 ### 4. Rewrite
 
-Read `references/techniques.md` for worked before/after examples. The main moves:
+Read `references/techniques.md` for worked before/after examples. Start with the sentences the checker ranked first. The main moves:
 
-- **Say the thing.** Cut throat-clearing openers ("In today's fast-paced world…", "When it comes to…") and the closing recap ("In conclusion…", "Ultimately, …"). Start where the interesting part starts, and stop when you're done.
+- **Say the thing.** Cut throat-clearing openers ("In today's fast-paced world…", "When it comes to…") and the closing recap ("In conclusion…", "Ultimately, …").
 - **Vary rhythm on purpose.** Mix short sentences with long ones that wander a bit before they land. Sometimes a one-line paragraph. Uniform 18–22-word sentences are the strongest statistical tell.
-- **Break the symmetry.** Not everything comes in threes. Make two points, or one point developed properly. Paragraphs should differ in length. Not every paragraph needs a topic sentence and a wrap-up line.
-- **Be specific.** Replace abstractions with concrete nouns, numbers, names, places, and moments. "Our onboarding was slow" becomes "New hires spent their first four days waiting on laptop permissions."
-- **Have a point of view.** Commit to claims. Cut reflexive hedges and false balance. A little bluntness, an aside, or a joke that fits the voice beats a neutral survey.
-- **Plain words.** Use "use" instead of "leverage", "help" instead of "empower", "show" instead of "showcase". Prefer the word you'd say out loud.
-- **Natural register.** Use contractions where the genre allows. Occasional fragments. Starting a sentence with "And" or "But" is fine.
-- **Punctuation.** Keep em dashes rare (about one per 300 words at most) and rework most of them into commas, periods, or parentheses. Avoid colon-reveal and semicolon-heavy sentences. Use straight quotes unless the user's text already uses curly ones.
-- **Formatting.** Prose stays prose. Don't add headers, bolded lead-ins, bullet lists, or emoji unless the genre really calls for them (resumes, long reports, docs) or the user's original had them.
+- **Vary how sentences start.** If half of them open with "The", "This", or "It", rework some to open with a clause, a name, a time ("Last March,"), "And", "But", or "So".
+- **Break the symmetry.** Not everything comes in threes. Paragraphs should differ in length. Not every paragraph needs a topic sentence and a wrap-up line.
+- **Be specific.** Replace abstractions with concrete nouns, numbers, names, places, and moments.
+- **Have a point of view.** Commit to claims. Cut reflexive hedges and false balance.
+- **Plain, short words.** "use" not "leverage", "help" not "facilitate", "make sure" not "ensure". A high average word length is a quiet tell.
+- **De-predict the phrasing.** For each sentence the checker ranked, ask yourself whether this is exactly how anyone would phrase it. If so, say it the way *this* person would: their idiom, a more concrete verb, an aside in parentheses, a slightly unexpected but accurate word. Don't make it random or obscure, just less generic.
+- **Repeat words instead of cycling synonyms.** Humans say "the city" three times. Models say "the city… the metropolis… the urban center".
+- **Leave some natural roughness.** Use a sentence fragment, a parenthetical aside, a mild colloquialism, or a sentence that starts with "And". Don't sand every edge. (This doesn't mean typos. See below.)
+- **Punctuation.** Keep em dashes rare (about one per 300 words at most). Avoid colon reveals. Use straight quotes.
+- **Formatting.** Prose stays prose unless the genre calls for structure (resumes, long reports).
+- **Match the voice sample** if you have one. Close the gaps the `--compare` table shows.
 
-### 5. Re-check and read it aloud (mentally)
+### 5. Re-check, then read it as a skeptic
 
-Run the checker again. Then read the piece as a skeptical editor would and ask: Would a person actually say this sentence? Is there anything here only a model would write? Does it sound like *one* person throughout?
+Run the checker again. Reasonable targets (use judgment, these aren't rules):
+- 0 flagged phrases or structures, and at most ~2 flagged words per 1,000 words
+- bland wording under ~15 per 1,000 words
+- sentence-length CV of at least ~0.45, with some short sentences
+- with a sample: no more than 2–3 voice metrics off
+
+If it's well off, do one more targeted pass on the worst sentences. Then read the piece as a skeptical editor and ask: Would a person actually say this? Does it sound like *one* person throughout?
+
+## Don't use detector tricks
+
+Some "AI humanizer" tools insert invisible characters, swap in look-alike Unicode letters, add deliberate typos, or run text through a synonym spinner. Don't do any of these:
+- Detectors and plagiarism checkers flag them specifically. Turnitin, for example, reports "AI-paraphrased" text and hidden characters.
+- They damage the text for the human reader, which is who actually matters.
+- Hidden characters can break copy-paste, ATS resume parsers, and screen readers.
+
+The only durable approach is writing that is actually specific, uneven, and in someone's real voice.
 
 ## Honesty guardrails
 
-- **Don't invent experiences, quotes, statistics, or credentials** to make the piece feel human. Fabricated specifics are worse than generic ones. If the piece needs a personal anecdote or a number you don't have, leave a clear placeholder like `[your example: the time a deploy broke on Friday]` and tell the user, or ask for one.
+- **Don't invent experiences, quotes, statistics, or credentials** to make the piece feel human. If it needs a personal anecdote or a number you don't have, leave a clear placeholder like `[your example: the time a deploy broke on Friday]` and tell the user.
 - Keep the meaning of the user's text intact when rewriting. Change the voice, not the facts or the claims.
-- If someone is clearly trying to submit AI-written work where that's prohibited (for example, a class assignment that bans AI), it's fine to mention that once, briefly. The writing help itself is still legitimate, and plenty of people are trying to avoid false positives on their own writing.
+- No tool can guarantee a "human" score on a detector, and detectors also flag plenty of real human writing. Don't promise a pass.
+- If someone is clearly trying to submit AI-written work where that's prohibited, it's fine to mention that once, briefly. The writing help itself is still legitimate.
 
 ## Output
 
 Unless the user asks for something else:
-1. The rewritten text, clean and ready to paste (or read aloud).
+1. The final text, clean and ready to paste (or read aloud).
 2. A short note (3–6 bullets) on the main changes, plus any placeholders the user needs to fill in.
 3. For speaking practice only: a few reusable phrases from the script (see `references/genres.md`).
+4. When it would really help, one line on the highest-leverage thing the user can do next, such as filling in the placeholders with real details, giving a writing sample, or doing a quick pass in their own words. Text the user has touched themselves reads more human than anything generated end to end.
 
 Many users of this skill are non-native English writers. If the user writes to you in another language, write your notes in that language, but keep the deliverable itself in English.
 

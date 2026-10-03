@@ -67,14 +67,15 @@ PHRASES = [
 
 # Second tier: not alarming alone, but models lean on these "safe", high-probability
 # words and frames. High density makes text feel predictable.
-BLAND_WORDS = [
-    "various", "overall", "significant", "significantly", "effective",
-    "effectively", "efficient", "efficiently", "ensure", "ensures", "ensuring",
-    "valuable", "approach", "aspects", "potential", "particularly",
-    "essentially", "numerous", "facilitate", "facilitates", "optimal",
-    "optimize", "optimizing", "individuals", "thus", "therefore",
-    "consequently", "key", "impactful", "strategic", "solutions",
+# Matched as stems, like WORDS ("ensur" catches ensure/ensured/ensuring).
+BLAND_STEMS = [
+    "various", "overall", "significan", "effective", "efficien", "ensur",
+    "valuable", "approach", "aspect", "potential", "particularly",
+    "essentially", "numerous", "facilitat", "optimal", "optimiz",
+    "individuals", "consequently", "impactful", "strategic", "solution",
 ]
+# Matched as exact words only (stems would hit "keyboard", "thusly", ...).
+BLAND_EXACT = ["key", "thus", "therefore"]
 
 BLAND_PHRASES = [
     r"in terms of", r"a variety of", r"in order to", r"it is essential",
@@ -100,10 +101,43 @@ STRUCTURES = {
 }
 
 
-def split_sentences(text):
-    text = re.sub(r"\s+", " ", text)
-    parts = re.split(r"(?<=[.!?])\s+(?=[\"'A-Z0-9\[(])", text)
-    return [p for p in parts if p.strip()]
+def stem_rx(stem):
+    return r"\b" + re.escape(stem) + r"[a-z]*\b"
+
+
+# Every pattern is compiled once here and scanned once per text, so the reported
+# hits and the per-sentence ranking always come from the same matches.
+TELL_PATTERNS = (
+    [("word", re.compile(stem_rx(w))) for w in WORDS]
+    + [("phrase", re.compile(p)) for p in PHRASES]
+    + [("structure:" + k, re.compile(p, re.MULTILINE if k == "ordinal_transitions" else 0))
+       for k, p in STRUCTURES.items()]
+)
+BLAND_PATTERNS = (
+    [re.compile(p) for p in BLAND_PHRASES]
+    + [re.compile(stem_rx(w)) for w in BLAND_STEMS]
+    + [re.compile(r"\b" + re.escape(w) + r"\b") for w in BLAND_EXACT]
+)
+SENT_BOUNDARY = re.compile(r"(?<=[.!?])\s+(?=[\"'A-Z0-9\[(])")
+STOCK_TRANSITION = re.compile(
+    r"(moreover|furthermore|additionally|however|ultimately|overall|notably|importantly|consequently)\b")
+DET_OPENERS = {"the", "this", "it", "these", "that", "they", "there"}
+
+
+def normalize(text):
+    # Curly apostrophes/quotes from Word, Docs and email clients count the same as straight ones.
+    return (text.replace("’", "'").replace("‘", "'")
+                .replace("“", '"').replace("”", '"'))
+
+
+def sentence_spans(text):
+    """(start, end) of each sentence in the original text, so match offsets map to sentences."""
+    spans, start = [], 0
+    for m in SENT_BOUNDARY.finditer(text):
+        spans.append((start, m.start()))
+        start = m.end()
+    spans.append((start, len(text)))
+    return [(a, b) for a, b in spans if text[a:b].strip()]
 
 
 def line_of(text, idx):
@@ -120,13 +154,26 @@ def mattr(tokens, window=50):
     return sum(ratios) / len(ratios)
 
 
-def find_all(patterns, lower, text, as_words=False):
-    hits = {}
-    for p in patterns:
-        rx = r"\b" + re.escape(p) + r"[a-z]*\b" if as_words else p
-        for m in re.finditer(rx, lower):
-            hits.setdefault(m.group(0), []).append(line_of(text, m.start()))
-    return hits
+def non_overlapping(matches, taken=()):
+    """Keep the longest matches first and drop any that overlap a kept or pre-taken span."""
+    kept, used = [], list(taken)
+    for m in sorted(matches, key=lambda m: -(m.end() - m.start())):
+        if all(m.end() <= a or m.start() >= b for a, b in used):
+            kept.append(m)
+            used.append((m.start(), m.end()))
+    return kept
+
+
+def opener(sentence):
+    """First word, lowercased, with any contraction stripped (It's -> it). None if not a word."""
+    first = sentence.split()[0].lower() if sentence.split() else ""
+    first = re.sub(r"^[^a-z]+", "", first)
+    word = re.match(r"[a-z]+", first)
+    return word.group(0) if word else None
+
+
+def em_dash_count(text):
+    return text.count("—") + len(re.findall(r"\s--\s", text))
 
 
 def style_metrics(text, sents, words):
@@ -134,10 +181,9 @@ def style_metrics(text, sents, words):
     lens = [len(s.split()) for s in sents]
     mean = statistics.mean(lens) if lens else 0
     sd = statistics.pstdev(lens) if len(lens) > 1 else 0
-    openers = [re.sub(r"[^a-z']", "", s.split()[0].lower()) for s in sents if s.split()]
+    openers = [o for o in (opener(s) for s in sents) if o]
     top_share = (max(openers.count(o) for o in set(openers)) / len(openers)) if openers else 0
-    det_share = (sum(o in {"the", "this", "it", "these", "that", "they"} for o in openers) / len(openers)) if openers else 0
-    lower_tokens = [w.lower() for w in words]
+    det_share = (sum(o in DET_OPENERS for o in openers) / len(openers)) if openers else 0
     return {
         "sentence_len_mean": round(mean, 1),
         "sentence_len_stdev": round(sd, 1),
@@ -146,63 +192,77 @@ def style_metrics(text, sents, words):
         "long_sentences_pct": round(100 * sum(l >= 30 for l in lens) / len(lens), 1) if lens else 0,
         "contractions_per_100w": round(100 * len(CONTRACTION.findall(text)) / n, 2),
         "avg_word_len": round(sum(len(w) for w in words) / n, 2),
-        "lexical_variety_mattr": round(mattr(lower_tokens), 3),
+        "lexical_variety_mattr": round(mattr([w.lower() for w in words]), 3),
         "commas_per_sentence": round(text.count(",") / max(len(sents), 1), 2),
         "top_opener_share": round(top_share, 2),
         "pronoun_det_opener_share": round(det_share, 2),
         "questions_pct": round(100 * sum(s.rstrip().endswith("?") for s in sents) / max(len(sents), 1), 1),
         "parentheses_per_100w": round(100 * text.count("(") / n, 2),
-        "em_dashes_per_300w": round(300 * (text.count("—") + len(re.findall(r"\s--\s", text))) / n, 2),
+        "em_dashes_per_300w": round(300 * em_dash_count(text) / n, 2),
     }
 
 
 def analyze(text):
+    text = normalize(text).strip()
     lower = text.lower()
     words = re.findall(r"[A-Za-z']+(?:-[A-Za-z']+)*", text)
     n_words = max(len(words), 1)
 
-    word_hits = find_all(WORDS, lower, text, as_words=True)
-    phrase_hits = find_all(PHRASES, lower, text)
-    bland_hits = find_all([r"\b" + w + r"\b" for w in BLAND_WORDS] + BLAND_PHRASES, lower, text)
+    spans = sentence_spans(text)
+    sents = [re.sub(r"\s+", " ", text[a:b]).strip() for a, b in spans]
 
-    struct_hits = {}
-    for name, p in STRUCTURES.items():
-        flags = re.MULTILINE if name == "ordinal_transitions" else 0
-        ms = list(re.finditer(p, lower, flags))
-        if ms:
-            struct_hits[name] = [line_of(text, m.start()) for m in ms]
+    def sentence_index(pos):
+        for i, (a, b) in enumerate(spans):
+            if pos < b:
+                return i
+        return len(spans) - 1
 
-    sents = split_sentences(text.strip())
-    paras = [p for p in re.split(r"\n\s*\n", text.strip()) if p.strip()]
+    word_hits, phrase_hits, struct_hits = {}, {}, {}
+    scores = [0] * len(spans)
+    tell_spans = []
+    for kind, rx in TELL_PATTERNS:
+        for m in rx.finditer(lower):
+            line = line_of(text, m.start())
+            if kind == "word":
+                word_hits.setdefault(m.group(0), []).append(line)
+            elif kind == "phrase":
+                phrase_hits.setdefault(m.group(0), []).append(line)
+            else:
+                struct_hits.setdefault(kind.split(":", 1)[1], []).append(line)
+            if kind != "structure:triplet_list":
+                tell_spans.append((m.start(), m.end()))
+                if spans:
+                    scores[sentence_index(m.start())] += 2
+
+    # Bland wording: longest match wins, and nothing already counted as a tell is counted again.
+    bland_hits = {}
+    all_bland = [m for rx in BLAND_PATTERNS for m in rx.finditer(lower)]
+    for m in non_overlapping(all_bland, taken=tell_spans):
+        bland_hits.setdefault(m.group(0), []).append(line_of(text, m.start()))
+        if spans:
+            scores[sentence_index(m.start())] += 1
+    for v in bland_hits.values():
+        v.sort()
+
+    paras = [p for p in re.split(r"\n\s*\n", text) if p.strip()]
     plens = [len(p.split()) for p in paras]
     pcv = (statistics.pstdev(plens) / statistics.mean(plens)) if len(plens) > 1 else None
 
-    trans_start = sum(
-        1 for s in sents
-        if re.match(r"(moreover|furthermore|additionally|however|ultimately|overall|notably|importantly|consequently)\b", s.lower())
-    )
-
-    # Rank sentences by how many tells/bland items they carry: rewrite these first.
-    tell_rx = [r"\b" + re.escape(w) + r"[a-z]*\b" for w in WORDS] + PHRASES + \
-              [p for k, p in STRUCTURES.items() if k != "triplet_list"]
-    bland_rx = [r"\b" + w + r"\b" for w in BLAND_WORDS] + BLAND_PHRASES
-    ranked = []
-    for s in sents:
-        sl = s.lower()
-        score = 2 * sum(len(re.findall(p, sl)) for p in tell_rx) + sum(len(re.findall(p, sl)) for p in bland_rx)
-        if score:
-            ranked.append((score, s))
-    ranked.sort(key=lambda x: -x[0])
-
-    em = text.count("—") + len(re.findall(r"\s--\s", text))
+    ranked = sorted(((sc, s) for sc, s in zip(scores, sents) if sc), key=lambda x: -x[0])
+    style = style_metrics(text, sents, words)
     return {
         "words": len(words),
         "sentences": len(sents),
         "paragraphs": len(paras),
         "paragraph_len_cv": round(pcv, 2) if pcv is not None else None,
-        "em_dashes": em,
-        "transition_sentence_starts": trans_start,
-        "style": style_metrics(text, sents, words),
+        "em_dashes": em_dash_count(text),
+        "transition_sentence_starts": sum(1 for s in sents if STOCK_TRANSITION.match(s.lower())),
+        # Kept at top level for backward compatibility with v1 --json consumers.
+        "sentence_len_mean": style["sentence_len_mean"],
+        "sentence_len_stdev": style["sentence_len_stdev"],
+        "sentence_len_cv": style["sentence_len_cv"],
+        "em_dashes_per_300_words": style["em_dashes_per_300w"],
+        "style": style,
         "flagged_words": word_hits,
         "flagged_phrases": phrase_hits,
         "structures": struct_hits,
@@ -274,23 +334,26 @@ COMPARE = [
 ]
 
 
-def compare_report(draft, sample):
+def voice_match(draft, sample):
     ds, ss = draft["style"], sample["style"]
-    out = ["", "VOICE MATCH vs SAMPLE (adjust the draft toward the sample)",
-           f"  {'metric':28} {'sample':>8} {'draft':>8}"]
-    off = 0
+    rows = []
     for key, label, tol in COMPARE:
         a, b = ss[key], ds[key]
-        base = max(abs(a), 1e-9)
-        bad = (abs(a - b) / base > tol) if a else (b > 0.5)
-        if bad:
-            off += 1
-            hint = "  <- too high" if b > a else "  <- too low"
-        else:
-            hint = ""
-        out.append(f"  {label:28} {a:>8} {b:>8}{hint}")
-    out.append(f"  {off} of {len(COMPARE)} metrics outside the sample's range")
-    if sample["words"] < 150:
+        off = (abs(a - b) / abs(a) > tol) if a else (b > 0.5)
+        rows.append({"metric": key, "label": label, "sample": a, "draft": b,
+                     "verdict": ("too high" if b > a else "too low") if off else "ok"})
+    return {"rows": rows, "off": sum(r["verdict"] != "ok" for r in rows),
+            "total": len(rows), "sample_words": sample["words"]}
+
+
+def compare_report(vm):
+    out = ["", "VOICE MATCH vs SAMPLE (adjust the draft toward the sample)",
+           f"  {'metric':28} {'sample':>8} {'draft':>8}"]
+    for r in vm["rows"]:
+        hint = f"  <- {r['verdict']}" if r["verdict"] != "ok" else ""
+        out.append(f"  {r['label']:28} {r['sample']:>8} {r['draft']:>8}{hint}")
+    out.append(f"  {vm['off']} of {vm['total']} metrics outside the sample's range")
+    if vm["sample_words"] < 150:
         out.append("  (sample is short; under ~150 words these numbers are rough)")
     return "\n".join(out)
 
@@ -308,15 +371,21 @@ def main():
     ap.add_argument("--compare", metavar="SAMPLE", help="human writing sample to match")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     a = ap.parse_args()
+    if a.compare == "-" and a.file == "-":
+        ap.error("draft and --compare sample can't both come from stdin; pass one as a file")
     r = analyze(read(a.file))
     if a.compare:
-        r["sample"] = analyze(read(a.compare))
+        sample = analyze(read(a.compare))
+        if not sample["words"]:
+            ap.error(f"--compare sample {a.compare!r} is empty")
+        r["sample"] = sample
+        r["voice_match"] = voice_match(r, sample)
     if a.json:
         print(json.dumps(r, indent=2))
         return
     print(report(r))
     if a.compare:
-        print(compare_report(r, r["sample"]))
+        print(compare_report(r["voice_match"]))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,41 @@
+{
+  "skill_name": "humanize-writing",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "can you make this linkedin post sound less like chatgpt wrote it? i actually got promoted and want to post about it but this sounds so fake:\n\n\"I'm thrilled to announce that I've embarked on a new journey as Senior Product Manager at Brightline! 🚀 Over the past three years, I've had the privilege of collaborating with incredible teams, navigating complex challenges, and fostering a culture of innovation. This isn't just a new title — it's a testament to the power of growth, resilience, and teamwork. I'm deeply grateful to my mentors, colleagues, and everyone who supported me along the way. Here's to new beginnings and unlocking even greater potential! #Grateful #Leadership #ProductManagement\"",
+      "expected_output": "A rewritten LinkedIn post with the same facts (promotion to Senior PM at Brightline, 3 years, gratitude) but no stock AI phrasing, natural voice, no fabricated specifics.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Write a ~500 word blog post for my personal dev blog about why I stopped using daily standups on my team and switched to async written updates. Should read like a real engineer wrote it, not AI. My team is 6 backend engineers.",
+      "expected_output": "A ~500 word first-person blog post with an opinion, varied rhythm, few AI tells, and placeholders (not invented facts) for personal specifics it doesn't know.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I need a short cold email to a potential client (a dentist office owner, Dr. Patel) offering my website redesign services. Here's how I usually write emails so match my style:\n\n\"Hey Mark - quick one. Saw your checkout page breaks on mobile (tried it on my phone this morning, the pay button's hidden behind the cookie banner). Happy to fix it, probably a 2 hour job. No pressure either way, just figured you'd want to know. - Sam\"\n\nGPTZero keeps flagging my AI drafts so I want it to sound like me.",
+      "expected_output": "A short, casual email in Sam's voice (dash sign-off, specific observation, low-pressure), with a placeholder for a real observation about Dr. Patel's site rather than an invented one.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Rewrite these resume bullets, recruiters say my resume looks AI generated:\n- Spearheaded cross-functional initiatives to streamline the onboarding process, resulting in a 40% increase in efficiency.\n- Leveraged data-driven insights to optimize marketing campaigns and drive customer engagement.\n- Results-driven professional with a proven track record of fostering collaboration in dynamic environments.",
+      "expected_output": "Plain-verb bullets in varied shapes, no inflated verbs or adjectives, keeps the user's 40% but invents no new metrics (placeholders instead), summary line cut or made concrete.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "幫我寫一段英文自我介紹，面試用的，大概一分鐘，我是後端工程師，做了4年，主要寫Go跟PostgreSQL，想換到fintech。要聽起來自然，不要像背稿",
+      "expected_output": "~130-160 word spoken-style English script with contractions, short sentences, few discourse markers, the user's real facts, placeholders for unknowns; notes in Chinese; reusable phrases list.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Rewrite the intro of my quarterly report so it doesn't sound like ChatGPT:\n\n\"In today's rapidly evolving business landscape, customer retention plays a pivotal role in driving sustainable growth. This report delves into the key factors influencing churn in Q3, providing comprehensive insights and actionable recommendations. Notably, our analysis reveals that onboarding experience, pricing, and product reliability are crucial drivers of customer satisfaction.\"\n\nQ3 churn was 6.1%, up from 4.8% in Q2.",
+      "expected_output": "A formal but direct report intro that leads with the 6.1% vs 4.8% finding, no stock phrases, no invented additional numbers.",
+      "files": []
+    }
+  ]
+}
